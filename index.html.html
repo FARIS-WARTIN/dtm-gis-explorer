@@ -1,0 +1,564 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cổng Thông Tin GIS & Du Lịch Đồng Tháp Mười</title>
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    
+    <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@300;400;500;600;700&family=Playfair+Display:ital,wght@0,600;0,700;1,600&display=swap" rel="stylesheet">
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: { sans: ['Be Vietnam Pro', 'sans-serif'], serif: ['Playfair Display', 'serif'] },
+                    colors: {
+                        teal: { 50: '#f0fdfa', 100: '#ccfbf1', 600: '#0d9488', 800: '#115e59', 900: '#134e4a' },
+                        amber: { 500: '#f59e0b', 600: '#d97706' },
+                        slate: { 800: '#1e293b', 900: '#0f172a' }
+                    },
+                    boxShadow: { 'soft': '0 20px 40px -10px rgba(0,0,0,0.1)' }
+                }
+            }
+        }
+    </script>
+    <style>
+        body { background-color: #f8fafc; scroll-behavior: smooth; }
+        .glass { background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(10px); border-bottom: 1px solid #66a5f8; }
+        .leaflet-popup-content-wrapper { border-radius: 12px; padding: 0; overflow: hidden; }
+        .leaflet-popup-content { margin: 0; width: 280px !important; }
+        .custom-scrollbar::-webkit-scrollbar { width: 6px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #91f3d1; border-radius: 10px; }
+        /* Hiệu ứng ảnh */
+        .img-hover:hover { transform: scale(1.05); transition: transform 0.7s ease; }
+    </style>
+</head>
+<body class="text-slate-800">
+
+    <div id="app" class="flex flex-col min-h-screen">
+        
+        <nav class="fixed top-0 w-full z-50 glass px-6 py-4 shadow-sm transition-all duration-300">
+            <div class="container mx-auto flex justify-between items-center">
+                <div class="flex items-center gap-3 cursor-pointer" onclick="switchPage('home')">
+                    <div class="bg-teal-600 text-white p-2 rounded-xl shadow-lg"><i data-lucide="map" class="w-6 h-6"></i></div>
+                    <div>
+                        <h1 class="font-serif font-bold text-2xl text-teal-900 leading-none">ĐỒNG THÁP MƯỜI</h1>
+                        <span class="text-[10px] font-bold tracking-[0.2em] text-teal-600 uppercase">Explorer</span>
+                    </div>
+                </div>
+                <div class="hidden lg:flex gap-2 bg-white/50 p-1.5 rounded-full border border-slate-200">
+                    <button onclick="switchPage('home')" class="nav-btn px-5 py-2 rounded-full text-sm font-bold text-slate-600 hover:bg-white hover:text-teal-600 transition" data-target="home">Tổng quan</button>
+                    <button onclick="switchPage('map')" class="nav-btn px-5 py-2 rounded-full text-sm font-bold text-slate-600 hover:bg-white hover:text-teal-600 transition" data-target="map">Bản đồ GIS</button>
+                    <button onclick="switchPage('biodiversity')" class="nav-btn px-5 py-2 rounded-full text-sm font-bold text-slate-600 hover:bg-white hover:text-teal-600 transition" data-target="biodiversity">Sinh thái</button>
+                    <button onclick="switchPage('culture')" class="nav-btn px-5 py-2 rounded-full text-sm font-bold text-slate-600 hover:bg-white hover:text-teal-600 transition" data-target="culture">Văn hóa</button>
+                    <button onclick="switchPage('agriculture')" class="nav-btn px-5 py-2 rounded-full text-sm font-bold text-slate-600 hover:bg-white hover:text-teal-600 transition" data-target="agriculture">Nông nghiệp</button>
+                    <button onclick="switchPage('specialties')" class="nav-btn px-5 py-2 rounded-full text-sm font-bold text-slate-600 hover:bg-white hover:text-teal-600 transition" data-target="specialties">Đặc sản</button>
+                </div>
+                <button class="lg:hidden text-slate-800" onclick="toggleMobileMenu()"><i data-lucide="menu" class="w-8 h-8"></i></button>
+            </div>
+            <div id="mobile-menu" class="hidden lg:hidden absolute top-full left-0 w-full bg-white border-t p-4 shadow-xl flex flex-col gap-2">
+                <button onclick="switchPage('home')" class="p-3 text-left font-bold text-slate-700 hover:bg-slate-50 rounded-lg">Tổng quan</button>
+                <button onclick="switchPage('map')" class="p-3 text-left font-bold text-slate-700 hover:bg-slate-50 rounded-lg">Bản đồ GIS</button>
+                <button onclick="switchPage('biodiversity')" class="p-3 text-left font-bold text-slate-700 hover:bg-slate-50 rounded-lg">Sinh thái</button>
+                <button onclick="switchPage('culture')" class="p-3 text-left font-bold text-slate-700 hover:bg-slate-50 rounded-lg">Văn hóa</button>
+                <button onclick="switchPage('agriculture')" class="p-3 text-left font-bold text-slate-700 hover:bg-slate-50 rounded-lg">Nông nghiệp</button>
+                <button onclick="switchPage('specialties')" class="p-3 text-left font-bold text-slate-700 hover:bg-slate-50 rounded-lg">Đặc sản</button>
+            </div>
+        </nav>
+
+        <main id="main-content" class="flex-grow pt-20">
+            </main>
+
+        <footer id="footer" class="bg-slate-900 text-slate-400 py-16 border-t border-slate-800 mt-auto">
+            <div class="container mx-auto px-6 grid md:grid-cols-4 gap-12">
+                <div class="col-span-1 md:col-span-2">
+                    <div class="flex items-center gap-3 mb-6 text-white font-serif font-bold text-3xl">
+                        <i data-lucide="map" class="text-teal-500"></i> DTM GIS
+                    </div>
+                    <p class="leading-relaxed mb-6">Hệ thống thông tin địa lý chuyên sâu phục vụ bảo tồn đa dạng sinh học, quy hoạch nông nghiệp công nghệ cao và phát triển du lịch bền vững vùng Đồng Tháp Mười.</p>
+                </div>
+                <div>
+                    <h4 class="text-white font-bold uppercase tracking-widest text-xs mb-6">Liên kết hệ thống</h4>
+                    <ul class="space-y-4 text-sm">
+                        <li><a href="#" class="hover:text-teal-400 transition">Dữ liệu Quan trắc</a></li>
+                        <li><a href="#" class="hover:text-teal-400 transition">Bản đồ Quy hoạch</a></li>
+                        <li><a href="#" class="hover:text-teal-400 transition">Cổng TTĐT Đồng Tháp</a></li>
+                    </ul>
+                </div>
+                <div>
+                    <h4 class="text-white font-bold uppercase tracking-widest text-xs mb-6">Liên hệ chuyên gia</h4>
+                    <ul class="space-y-4 text-sm">
+                        <li class="flex gap-3"><i data-lucide="mail" class="w-4 h-4 text-teal-500"></i> faris@gis-lab.vn</li>
+                        <li class="flex gap-3"><i data-lucide="phone" class="w-4 h-4 text-teal-500"></i> (+84) 909 123 456</li>
+                        <li class="flex gap-3"><i data-lucide="map-pin" class="w-4 h-4 text-teal-500"></i> TP. Cao Lãnh, Đồng Tháp</li>
+                    </ul>
+                </div>
+            </div>
+            <div class="container mx-auto px-6 mt-16 pt-8 border-t border-slate-800 text-center text-sm opacity-50">
+                © 2025 Faris - Thạc sĩ Địa Lý (GIS & Viễn thám). All rights reserved.
+            </div>
+        </footer>
+    </div>
+
+    <div id="detail-modal" class="fixed inset-0 z-[100] hidden">
+        <div class="absolute inset-0 bg-slate-900/90 backdrop-blur-sm transition-opacity" onclick="closeModal()"></div>
+        <div class="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-full max-w-5xl px-4">
+            <div class="bg-white rounded-3xl shadow-2xl overflow-hidden flex flex-col md:flex-row max-h-[90vh]">
+                <div class="md:w-5/12 h-64 md:h-auto relative">
+                    <img id="modal-img" class="w-full h-full object-cover" src="" alt="">
+                    <div class="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent"></div>
+                    <div id="modal-tag" class="absolute top-6 left-6 bg-teal-600 text-white text-xs font-bold px-4 py-1.5 rounded-full uppercase tracking-wider shadow-lg"></div>
+                </div>
+                <div class="md:w-7/12 p-8 md:p-12 flex flex-col bg-white overflow-y-auto custom-scrollbar">
+                    <div class="flex justify-between items-start mb-6">
+                        <div>
+                            <h3 id="modal-title" class="font-serif font-bold text-3xl md:text-4xl text-teal-900 mb-2 leading-tight"></h3>
+                            <div class="h-1 w-24 bg-amber-500 rounded-full"></div>
+                        </div>
+                        <button onclick="closeModal()" class="p-2 hover:bg-slate-100 rounded-full transition"><i data-lucide="x" class="w-6 h-6 text-slate-400"></i></button>
+                    </div>
+                    
+                    <p id="modal-intro" class="text-xl text-teal-700 font-medium italic mb-8 leading-relaxed"></p>
+                    
+                    <div id="modal-detail" class="prose text-slate-600 leading-7 text-base mb-8"></div>
+
+                    <div id="modal-specs-container" class="bg-teal-50 rounded-xl p-6 border border-teal-100 mb-8 hidden">
+                        <h4 class="font-bold text-teal-800 uppercase text-xs tracking-widest mb-4">Thông số & Đặc điểm</h4>
+                        <div id="modal-specs" class="grid grid-cols-1 sm:grid-cols-2 gap-4"></div>
+                    </div>
+
+                    <div class="mt-auto pt-6 border-t border-slate-100 flex justify-end">
+                        <button onclick="closeModal()" class="px-8 py-3 bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold rounded-xl transition-all">Đóng cửa sổ</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- 1. CƠ SỞ DỮ LIỆU GIS (GEODATABASE) ---
+        const GIS_DATA = {
+            points: [
+                { name: "Vườn QG Tràm Chim", lat: 10.7333, lng: 105.5167, type: "Sinh thái", desc: "Khu Ramsar thứ 2000 thế giới, vùng lõi bảo tồn Sếu đầu đỏ." },
+                { name: "Làng nổi Tân Lập", lat: 10.6833, lng: 105.8167, type: "Du lịch", desc: "Rừng tràm nguyên sinh và cung đường xuyên rừng 5km." },
+                { name: "Khu du lịch Gáo Giồng", lat: 10.6078, lng: 105.6313, type: "Du lịch", desc: "Khu du lịch sinh thái được ví như lá phổi xanh của vùng Đồng Tháp Mười với hệ sinh thía đất ngập nước đặc trưng và rừng tràm rộng lớn." },
+                { name: "Khu di tích Gò Tháp", lat: 10.6333, lng: 105.8333, type: "Văn hóa", desc: "Di tích quốc gia đặc biệt, trung tâm văn hóa Óc Eo." },
+                { name: "Khu bảo tồn Láng Sen", lat: 10.7760, lng: 105.7420, type: "Sinh thái", desc: "Vùng đất ngập nước nội địa (Inland wetland) điển hình." },
+                { name: "Xẻo Quýt", lat: 10.4552, lng: 105.8355, type: "Lịch sử", desc: "Căn cứ cách mạng kiên cường ẩn mình giữa rừng tràm." },
+                { name: "Khu du lịch Đồng Sen", lat: 10.5167, lng: 105.7833, type: "Du lịch", desc: "Cánh đồng sen bạt ngàn, trải nghiệm chèo xuồng." }
+            ],
+            zones: [
+                { name: "Vùng Lõi Bảo Vệ Nghiêm Ngặt", color: "#dc2626", coords: [[10.75, 105.50], [10.75, 105.53], [10.72, 105.53], [10.72, 105.50]] },
+                { name: "Vùng Đệm Sinh Thái", color: "#10b981", coords: [[10.76, 105.49], [10.76, 105.54], [10.71, 105.54], [10.71, 105.49]] },
+                { name: "Khu Vực Khảo Cổ Gò Tháp", color: "#d97706", coords: [[10.64, 105.82], [10.64, 105.84], [10.62, 105.84], [10.62, 105.82]] }
+            ]
+        };
+
+        // --- 2. CƠ SỞ DỮ LIỆU NỘI DUNG (RICH CONTENT) ---
+        const CONTENT_DB = {
+            biodiversity: [
+                {
+                    name: "Sếu Đầu Đỏ", tag: "Sách Đỏ IUCN",
+                    img: "https://seudongthap.vn/storage/uploads/s%E1%BA%BFu%208-1_1699454886.jpg",
+                    intro: "Biểu tượng của Tràm Chim, loài chim biết bay cao nhất thế giới.",
+                    detail: "Sếu đầu đỏ (Grus antigone) là loài chim chỉ thị môi trường quan trọng. Chúng chỉ xuất hiện ở những nơi có môi trường đất ngập nước trong lành, nguồn thức ăn (củ năng kim) dồi dào và không bị con người quấy nhiễu. Hiện nay, tỉnh Đồng Tháp đang triển khai đề án bảo tồn và phát triển đàn sếu với ngân sách hàng trăm tỷ đồng.",
+                    specs: ["Cao: 1.5 - 1.8m", "Tình trạng: Sắp nguy cấp", "Mùa: Tháng 1 - 4"]
+                },
+                  {
+                    name: "Các loài chim", tag: "Đa dạng sinh học",
+                    img: "https://mia.vn/media/uploads/blog-du-lich/vuon-quoc-gia-tram-chim-dong-thap-muoi-thu-nho-mua-nuoc-noi-03-1689499214.jpg",
+                    intro: "Tràm Chim là nơi cư trú của hơn 232 loài chim, thuộc 25 chi và 49 họ. Đây là một trong những khu vực bảo tồn chim nước quan trọng nhất của Việt Nam và thế giới.",
+                    detail: "Đại bàng đen, Già đẫy lớn và Già đẫy nhỏ, Nhan điển (Chim điên điển), Cò ốc (Anastomus oscitans)",
+                    specs: ["20.000 cá thể chim nước tụ tập kiếm ăn và làm tổ hàng năm", "32 loài chim quý hiếm được bảo tồn", "Dễ dàng quan sát thấy các loài chim phổ biến vào mùa nước nổi (tháng 9 – tháng 12)"]
+                },
+                  {
+                    name: "Các loài thú", tag: "Đa dạng sinh học",
+                    img: "https://shopvatnuoi.vn/wp-content/uploads/2024/07/Meo-rung-Giong-loai-quy-hiem-shopvatnuoivn-nai-pet-c0.jpg",
+                    intro: "Vườn Quốc gia Tràm Chim là nơi sinh sống của 149 loài thú, trong đó có nhiều loài quý hiếm và nguy cấp được ghi trong Sách Đỏ Việt Nam và Sách Đỏ IUCN.",
+                    detail: "Trong đó, có nhiều loài thú quý hiếm như: Mèo rừng (Prionailurus bengalensis), Mang lớn (Herpestes urva), Bò tót (Bos gaurus), Nai sừng tấm (Cervus unicolor) và Rái cá lông mũi (Lutrogale perspicillata).",
+                    specs: ["149 loài thú", "Nhiều loài quý hiếm", "Hệ sinh thái đa dạng"]
+                },
+                {
+                    name: "Rừng Tràm (Melaleuca)", tag: "Hệ sinh thái",
+                    img: "https://cdn.baogialai.com.vn/images/5d93661b5836672daa8629aec90c6a0b62ef59e3d3d7a436beeb0af47189163ac13bcefabe9321eaac57f946609aef3a32142924548a37f623d80ffc0c913e27/images2689838_1r.jpg",
+                    intro: "Lá phổi xanh giúp cân bằng độ phèn và điều hòa khí hậu.",
+                    detail: "Cây tràm là loài thực vật bản địa có sức sống mãnh liệt trên vùng đất phèn chua ngập nước. Rừng tràm đóng vai trò giữ đất, lọc nước, cung cấp tinh dầu dược liệu và là ngôi nhà chung của hàng ngàn loài cò, vạc, điên điển làm tổ.",
+                    specs: ["Diện tích: >50.000 ha", "Công dụng: Gỗ, Tinh dầu", "Đặc tính: Chịu phèn"]
+                },
+                {
+                    name: "Hoa Sen Hồng", tag: "Biểu tượng",
+                    img: "https://trungtamthuoc.com/images/others/cay-hoa-sen-0-8022.jpg",
+                    intro: "Vẻ đẹp thanh cao, tinh khiết vươn lên từ bùn đất.",
+                    detail: "Sen Đồng Tháp Mười nổi tiếng với kích thước lớn và hương thơm dịu nhẹ. Sen không chỉ là cảnh quan du lịch mà còn là cây kinh tế mũi nhọn với chuỗi giá trị đa dạng: hạt sen, ngó sen, trà lá sen, tơ sen dệt vải và các sản phẩm OCOP.",
+                    specs: ["Mùa hoa: Quanh năm", "Sản phẩm: Tơ, Trà, Sữa", "Ý nghĩa: Sự vươn lên"]
+                },
+                {
+                    name: "Lúa Ma (Lúa Trời)", tag: "Nguồn gen quý",
+                    img: "https://congnghexanhgroup.vn/cdn/shop/articles/1._Xu_ly_Lua_ma_lua_2_tang._lua_lon_1200x1200.jpg?v=1662726216",
+                    intro: "Loài lúa hoang dã kỳ diệu, nước dâng tới đâu cây vươn tới đó.",
+                    detail: "Lúa ma là tổ tiên của lúa trồng hiện đại, có khả năng sinh tồn phi thường trong mùa nước nổi. Thân lúa có thể dài tới 4-5 mét để ngoi lên mặt nước. Hạt lúa có đuôi dài, tự rụng khi chín vào ban đêm, là thức ăn cho chim trời và cá.",
+                    specs: ["Chiều cao: Tối đa 5m", "Đặc điểm: Chín rụng đêm", "Giá trị: Bảo tồn gen"]
+                },
+                {
+                    name: "Cá Hô", tag: "Thủy quái Mekong",
+                    img: "https://cdn2.fptshop.com.vn/unsafe/1920x0/filters:format(webp):quality(75)/ca_ho_1_da72d22a4b.png",
+                    intro: "Loài cá chép lớn nhất thế giới sinh sống tại lưu vực Mekong.",
+                    detail: "Cá Hô từng là biểu tượng của sự trù phú vùng sông nước. Hiện nay, loài cá này đang được nhân giống và bảo tồn tại các trung tâm thủy sản Đồng Tháp để phục hồi nguồn lợi thủy sản tự nhiên.",
+                    specs: ["Trọng lượng: Tối đa 300kg", "Tình trạng: Cực kỳ nguy cấp", "Môi trường: Sông sâu"]
+                }
+            ],
+            culture: [
+                {
+                    name: "Văn hóa Óc Eo", tag: "Khảo cổ học",
+                    img: "https://thanhnien.mediacdn.vn/Uploaded/minhnguyet/2022_07_21/den-than-159.jpg",
+                    intro: "Dấu tích huy hoàng của vương quốc Phù Nam cổ đại (Thế kỷ I-VI).",
+                    detail: "Khu di tích Gò Tháp là một trong những trung tâm quan trọng nhất của văn hóa Óc Eo. Tại đây đã khai quật được nhiều tượng thần Vishnu, Shiva bằng đá, các lá vàng khắc chữ Phạn và hàng nghìn hạt chuỗi, minh chứng cho một nền thương mại phát triển rực rỡ.",
+                    specs: ["Niên đại: TK 1 - 6 CN", "Địa điểm: Gò Tháp", "Hiện vật: Vàng, Đá quý"]
+                },
+                {
+                    name: "Lễ hội Gò Tháp", tag: "Truyền thống",
+                    img: "https://ik.imagekit.io/tvlk/blog/2023/12/go-and-share-khu-di-tich-go-thap-dong-thap-1.webp",
+                    intro: "Dấu tích huy hoàng của vương quốc Phù Nam cổ đại (Thế kỷ I-VI).",
+                    detail: "Khu di tích Gò Tháp là một trong những trung tâm quan trọng nhất của văn hóa Óc Eo. Tại đây đã khai quật được nhiều tượng thần Vishnu, Shiva bằng đá, các lá vàng khắc chữ Phạn và hàng nghìn hạt chuỗi, minh chứng cho một nền thương mại phát triển rực rỡ.",
+                    specs: ["Niên đại: TK 1 - 6 CN", "Địa điểm: Gò Tháp", "Hiện vật: Vàng, Đá quý"]
+                },
+                {
+                    name: "Xẻo Quýt", tag: "Lịch sử",
+                    img: "https://image.vietgoing.com/destination/large/vietgoing_qfs2201047730.webp",
+                    intro: "Khu di tích lịch sử kết hợp du lịch sinh thái.",
+                    detail: "Xẻo Quýt là căn cứ cách mạng kiên cường trong kháng chiến chống Mỹ. Ngày nay, Xẻo Quýt đã trở thành khu du lịch sinh thái hấp dẫn với hệ sinh thái rừng tràm đặc trưng và các di tích lịch sử như hầm bí mật, nhà truyền thống.",
+                    specs: ["Diện tích: 260 ha", "Thành lập: 1994", "Loại hình: Sinh thái & Lịch sử"]
+                },
+                {
+                    name: "Chùa Kiến An Cung", tag: "Tôn giáo",
+                    img: "https://r2.nucuoimekong.com/wp-content/uploads/kien-an-cung.jpg",
+                    intro: "Ngôi chùa cổ kính với kiến trúc độc đáo và lịch sử lâu đời.",
+                    detail: "Chùa Kiến An Cung là một trong những ngôi chùa cổ nhất tại Đồng Tháp, với kiến trúc độc đáo và lịch sử lâu đời. Chùa được xây dựng vào thế kỷ XVII, là nơi thờ Phật và tổ chức các hoạt động văn hóa, tôn giáo.",
+                    specs: ["Xây dựng: Thế kỷ XVII", "Kiến trúc: Kết hợp Đông - Tây", "Chức năng: Tôn giáo & Văn hóa"]
+                },
+                {
+                    name: "Đờn Ca Tài Tử", tag: "Di sản UNESCO",
+                    img: "https://baochauelec.com/cdn/images/don-ca-tai-tu-2.jpg",
+                    intro: "Tiếng lòng của người dân Nam Bộ, phóng khoáng và trữ tình.",
+                    detail: "Đờn ca tài tử là loại hình nghệ thuật dân gian đặc sắc, kết hợp giữa tiếng đờn (Kìm, Cò, Tranh, Bầu) và giọng ca điêu luyện. Tại Đồng Tháp, du khách có thể thưởng thức đờn ca trên các ghe xuồng hoặc trong các vườn cây ăn trái sum suê.",
+                    specs: ["Nhạc cụ: Kìm, Cò, Tranh", "Không gian: Sông nước", "Tính chất: Ngẫu hứng"]
+                },
+                {
+                    name: "Làng Chiếu Định Yên", tag: "Làng nghề",
+                    img: "https://luhanhvietnam.com.vn/du-lich/vnt_upload/news/12_2019/lang-chieu-dinh-yen-dong-thap-8.jpg",
+                    intro: "Nổi tiếng với 'Chợ Ma' họp vào ban đêm độc nhất vô nhị.",
+                    detail: "Làng nghề dệt chiếu Định Yên (Lấp Vò) đã tồn tại hàng trăm năm. Trước đây, do ban ngày bận rộn đồng áng, người dân thường họp chợ mua bán chiếu vào ban đêm dưới ánh đèn dầu leo lét, tạo nên nét văn hóa 'Chợ Ma' kỳ thú.",
+                    specs: ["Vị trí: Lấp Vò", "Sản phẩm: Chiếu lác", "Đặc điểm: Di sản phi vật thể"]
+                },
+                {
+                    name: "Nhà Cổ Huỳnh Thủy Lê", tag: "Kiến trúc",
+                    img: "https://upload.wikimedia.org/wikipedia/commons/thumb/b/b3/Nh%C3%A0_c%E1%BB%95_Hu%E1%BB%B3nh_Th%E1%BB%A7y_L%C3%AA.jpg/1200px-Nh%C3%A0_c%E1%BB%95_Hu%E1%BB%B3nh_Th%E1%BB%A7y_L%C3%AA.jpg",
+                    intro: "Sự giao thoa kiến trúc Đông - Tây và câu chuyện tình lãng mạn.",
+                    detail: "Ngôi nhà cổ tại Sa Đéc gắn liền với nhân vật Huỳnh Thủy Lê và nữ văn sĩ Marguerite Duras (tác giả cuốn tiểu thuyết 'Người Tình'). Ngôi nhà có mặt tiền kiểu Pháp nhưng nội thất đậm chất Trung Hoa và Việt Nam.",
+                    specs: ["Xây dựng: 1895", "Phong cách: Đông Dương", "Phim: The Lover (1992)"]
+                }
+            ],
+            agriculture: [
+                {
+                    name: "UAV Phun Thuốc", tag: "Công nghệ 4.0",
+                    img: "https://ctuav.vn/wp-content/uploads/2025/08/Thiet-ke-chua-co-ten-4.png",
+                    intro: "Cách mạng hóa quy trình canh tác lúa trên cánh đồng lớn.",
+                    detail: "Sử dụng máy bay không người lái (Drone) để phun thuốc BVTV, gieo sạ và rải phân bón. Công nghệ này giúp tiết kiệm 90% nước, 30% thuốc, tăng độ chính xác gấp 50 lần so với thủ công và bảo vệ sức khỏe người nông dân khỏi hóa chất độc hại.",
+                    specs: ["Thiết bị: DJI Agras", "Hiệu suất: 10ha/giờ", "Lợi ích: An toàn"]
+                },
+                {
+                    name: "Viễn Thám & GIS", tag: "Giám sát vệ tinh",
+                    img: "https://vtcnetviet.com/wp-content/uploads/2023/04/cong-nghe-iot-trong-nong-nghiep.jpg",
+                    intro: "Quản lý sức khỏe cây trồng từ không gian.",
+                    detail: "Hệ thống sử dụng ảnh vệ tinh Sentinel-2 và thuật toán AI để phân tích chỉ số thực vật (NDVI). Giúp phát hiện sớm dịch bệnh (đạo ôn, rầy nâu), dự báo năng suất lúa và tối ưu hóa lịch xuống giống để tránh lũ và mặn.",
+                    specs: ["Dữ liệu: Sentinel-2", "Chỉ số: NDVI", "Ứng dụng: Quy hoạch"]
+                },
+                {
+                    name: "Làng Hoa Sa Đéc", tag: "Nông nghiệp Đô thị",
+                    img: "https://file3.qdnd.vn/data/images/0/2023/01/06/thuyan/hoa%20-%2010%20hieu%20minh%20vu%20-%20tuoi%20hoa%20-%20giai%20kk.jpg?dpi=150&quality=100&w=870",
+                    intro: "Thủ phủ hoa kiểng của miền Tây với kỹ thuật trồng trên giàn.",
+                    detail: "Nông dân Sa Đéc áp dụng kỹ thuật trồng hoa trên giàn cao để thích ứng với mùa nước nổi. Hệ thống tưới nhỏ giọt tự động, nhà màng và kỹ thuật lai tạo giống mới giúp hoa nở đúng dịp Tết, mang lại giá trị kinh tế gấp 5-10 lần trồng lúa.",
+                    specs: ["Diện tích: >600ha", "Sản phẩm: Hoa hồng, Cúc", "Kỹ thuật: Trồng giàn"]
+                },
+                {
+                    name: "Mô hình Lúa - Tôm", tag: "Bền vững",
+                    img: "https://thiennhienmoitruong.vn/upload2024/images/btv-t-phuong-2/155a.jpg",
+                    intro: "Mô hình nông nghiệp thuận thiên, thích ứng biến đổi khí hậu.",
+                    detail: "Sự kết hợp hoàn hảo: Mùa mưa trồng lúa, mùa khô nuôi tôm càng xanh. Cây lúa cung cấp rơm rạ làm thức ăn cho tôm, chất thải của tôm làm phân bón cho lúa. Sản phẩm tạo ra là Lúa sạch và Tôm sạch, không dùng hóa chất.",
+                    specs: ["Chu kỳ: 1 Tôm - 1 Lúa", "Sản phẩm: Gạo hữu cơ", "Hiệu quả: Bền vững"]
+                }
+            ],
+            specialties: [
+                {
+                    name: "Lẩu Mắm Miền Tây", tag: "Ẩm thực Di sản",
+                    img: "https://cdn2.fptshop.com.vn/unsafe/1920x0/filters:format(webp):quality(75)/lau_mam_hai_san_1_0233d3d565.png",
+                    intro: "Bản giao hưởng của mắm cá linh và hơn 20 loại rau đồng nội.",
+                    detail: "Lẩu mắm ngon nhờ nước lèo nấu từ mắm cá linh ủ kỹ, thơm lừng mùi sả ớt. Điều đặc biệt nhất là dĩa rau ăn kèm khổng lồ: bông súng, điên điển, kèo nèo, rau nhút, hẹ nước... kết hợp cùng cá rô đồng, lươn, ốc bươu.",
+                    specs: ["Nguyên liệu: Mắm linh", "Rau: Bông điên điển...", "Vị: Đậm đà"]
+                },
+                {
+                    name: "Cá Lóc Nướng Trui", tag: "Ẩm thực Khẩn hoang",
+                    img: "https://cdn.tgdd.vn/Files/2021/08/04/1372928/cach-lam-mon-ca-loc-nuong-trui-dan-da-dac-san-mien-tay-202108041058430862.jpg",
+                    intro: "Giữ trọn vị ngọt nguyên bản của cá đồng nướng rơm.",
+                    detail: "Cá lóc vừa bắt lên, không đánh vảy, xiên que tre rồi cắm xuống đất, phủ rơm khô đốt cháy. Khi rơm tàn, cạo lớp vảy cháy, thịt cá trắng ngần, thơm phức mùi khói. Cuốn với bánh tráng, đọt sen non, lá cóc và chấm mắm me chua ngọt.",
+                    specs: ["Chế biến: Nướng rơm", "Nước chấm: Mắm me", "Ăn kèm: Rau rừng"]
+                },
+                {
+                    name: "Nem Lai Vung", tag: "Quà biếu trứ danh",
+                    img: "https://media.loveitopcdn.com/20433/thumb/nem-chua-mon-an-dac-san-lai-vung-nem-co-hoan-1.jpg",
+                    intro: "'Lai Vung là xứ lạ lùng / Nem chua mà ngọt, thơm nồng tấm say'.",
+                    detail: "Nem Lai Vung có màu đỏ hồng bắt mắt, gói trong lá chùm ruột và lá chuối. Vị nem là sự hòa quyện của vị chua thanh (lên men), vị ngọt (đường), vị mặn (nước mắm) và vị cay nồng của tiêu sọ, tỏi lát.",
+                    specs: ["Xuất xứ: Lai Vung", "Vị: Chua, Ngọt, Cay", "Bảo quản: 7-10 ngày"]
+                },
+                {
+                    name: "Hủ Tiếu Sa Đéc", tag: "Trứ danh",
+                    img: "https://bizweb.dktcdn.net/100/489/006/files/hu-tieu-sa-dec-11.jpg?v=1698661221327",
+                    intro: "Sợi hủ tiếu dai mềm đặc biệt từ làng bột trăm năm.",
+                    detail: "Hủ tiếu Sa Đéc khác biệt nhờ sợi bánh màu trắng đục, dai mà mềm, không bị bở. Nước dùng hầm từ xương ống ngọt thanh, ăn kèm với tôm, thịt nạc, gan heo và đặc biệt là tăng xại (cải cúc) tạo hương vị riêng biệt.",
+                    specs: ["Đặc điểm: Sợi dai mềm", "Nước dùng: Ngọt thanh", "Làng nghề: Bột Sa Đéc"]
+                },
+                {
+                    name: "Chuột Đồng Quay Lu", tag: "Món ngon độc lạ",
+                    img: "https://vanhoamientay.com/wp-content/uploads/2021/08/30039-chuot-quay-lu-670x446-1.jpg",
+                    intro: "Đặc sản mùa lúa chín, thịt thơm ngon hơn gà.",
+                    detail: "Chuột đồng ăn lúa nên thịt sạch, béo và thơm. Chuột được làm sạch, tẩm ướp gia vị rồi móc vào lu đất nướng quay. Da chuột vàng ruộm, giòn tan, thịt mềm ngọt. Đây là món nhậu 'bén' nhất miền Tây.",
+                    specs: ["Mùa vụ: Mùa gặt", "Chế biến: Quay lu", "Hương vị: Béo, giòn"]
+                },
+                {
+                    name: "Rượu Hồng Sen Tửu", tag: "Quốc tửu Đồng Tháp",
+                    img: "https://ruouvip.vn/wp-content/uploads/2023/03/ruou-sen-dong-thap-hong-sen-tuu.jpg",
+                    intro: "Tinh túy chưng cất từ tim sen, củ sen và nếp cái hoa vàng.",
+                    detail: "Rượu sen được nấu theo phương pháp truyền thống, ủ men cùng tim sen, củ sen và hạt sen trong thời gian dài. Rượu có màu hồng nhạt tự nhiên, hương sen thơm thoang thoảng, vị đắng nhẹ đầu lưỡi nhưng hậu ngọt, uống vào êm dịu.",
+                    specs: ["Thành phần: Tim sen", "Độ cồn: 29-35 độ", "Tác dụng: An thần"]
+                }
+            ]
+        };
+
+        // --- 3. LOGIC ĐIỀU KHIỂN ---
+        
+        // Render trang chủ
+        function renderHome() {
+            return `
+                <div class="animate-fade-in">
+                    <div class="relative h-[95vh] flex items-center justify-center text-center text-white px-6">
+                        <div class="absolute inset-0 z-[-1]">
+                            <img src="https://images.unsplash.com/photo-1552083375-1447ce886485?q=80&w=2070&auto=format&fit=crop" class="w-full h-full object-cover opacity-30">
+                            <div class="absolute inset-0 bg-gradient-to-b from-slate-900/60 to-slate-900/30"></div>
+                        </div>
+                        <div class="max-w-4xl">
+                            <span class="inline-flex items-center gap-2 py-1 px-4 border border-white/30 bg-white/10 backdrop-blur rounded-full text-xs font-bold tracking-[0.2em] uppercase mb-8"><span class="w-2 h-2 bg-teal-400 rounded-full animate-pulse"></span> Cổng thông tin địa lý</span>
+                            <h1 class="text-6xl md:text-8xl font-serif font-bold mb-8 leading-tight drop-shadow-2xl">Đồng Tháp Mười</h1>
+                            <p class="text-xl text-slate-200 mb-12 max-w-2xl mx-auto font-light leading-relaxed">Vùng đất của Sen hồng và hệ sinh thái đất ngập nước Ramsar thế giới. Trải nghiệm du lịch thông minh với bản đồ số hóa GIS.</p>
+                            <div class="flex flex-col sm:flex-row gap-4 justify-center">
+                                <button onclick="switchPage('map')" class="bg-teal-600 hover:bg-teal-500 px-10 py-4 rounded-full font-bold shadow-lg flex items-center justify-center gap-2 transition hover:-translate-y-1"><i data-lucide="map"></i> Truy cập Bản đồ</button>
+                                <button onclick="switchPage('culture')" class="bg-white text-teal-900 hover:bg-slate-100 px-10 py-4 rounded-full font-bold shadow-lg flex items-center justify-center gap-2 transition hover:-translate-y-1"><i data-lucide="landmark"></i> Tìm hiểu Văn hóa</button>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="container mx-auto px-6 -mt-20 relative z-10">
+                        <div class="bg-white rounded-3xl shadow-xl p-10 grid grid-cols-2 lg:grid-cols-4 gap-8 divide-x divide-slate-100">
+                            <div class="text-center px-4"><div class="text-4xl font-serif font-bold text-teal-800 mb-1">50K+</div><div class="text-xs font-bold text-slate-400 uppercase tracking-widest">Hecta Rừng Tràm</div></div>
+                            <div class="text-center px-4"><div class="text-4xl font-serif font-bold text-teal-800 mb-1">200+</div><div class="text-xs font-bold text-slate-400 uppercase tracking-widest">Loài Chim Quý</div></div>
+                            <div class="text-center px-4"><div class="text-4xl font-serif font-bold text-teal-800 mb-1">Top 2</div><div class="text-xs font-bold text-slate-400 uppercase tracking-widest">Khu Ramsar VN</div></div>
+                            <div class="text-center px-4"><div class="text-4xl font-serif font-bold text-teal-800 mb-1">4.0</div><div class="text-xs font-bold text-slate-400 uppercase tracking-widest">Nông nghiệp Số</div></div>
+                        </div>
+                    </div>
+
+                    ${renderSection('Đa dạng Sinh học', 'Kho tàng gen quý giá của vùng đất ngập nước hạ lưu Mekong.', 'biodiversity')}
+                    ${renderSection('Văn hóa & Di sản', 'Hành trình tìm về cội nguồn văn hóa Óc Eo và ký ức lịch sử hào hùng.', 'culture', 'bg-slate-50')}
+                    ${renderSection('Nông nghiệp 4.0', 'Đẩy mạnh ứng dụng UAV, Viễn thám và IoT vào sản xuất bền vững.', 'agriculture')}
+                    ${renderSection('Đặc sản Đồng Tháp', 'Hương vị dân dã, mộc mạc làm say lòng du khách phương xa.', 'specialties', 'bg-teal-50')}
+                </div>
+            `;
+        }
+
+        // Render từng Section (Card Grid)
+        function renderSection(title, sub, type, bg = 'bg-white') {
+            const items = CONTENT_DB[type].slice(0, 4);
+            const cards = items.map((item, idx) => `
+                <div onclick="openModal('${type}', ${idx})" class="group bg-white rounded-2xl overflow-hidden shadow-sm hover:shadow-2xl transition-all duration-300 cursor-pointer border border-slate-100 transform hover:-translate-y-2">
+                    <div class="h-64 overflow-hidden relative">
+                        <img src="${item.img}" class="w-full h-full object-cover img-hover" alt="${item.name}">
+                        <div class="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                        <div class="absolute top-4 right-4 bg-white/90 backdrop-blur text-teal-800 text-[10px] font-bold px-3 py-1.5 rounded-full uppercase tracking-wide">${item.tag}</div>
+                    </div>
+                    <div class="p-6">
+                        <h3 class="font-serif font-bold text-xl text-slate-900 mb-2 group-hover:text-teal-600 transition-colors">${item.name}</h3>
+                        <p class="text-slate-600 text-sm leading-relaxed mb-6 line-clamp-3">${item.intro}</p>
+                        <div class="pt-4 border-t border-slate-50 flex justify-between items-center text-xs font-bold text-teal-600 uppercase tracking-widest">
+                            <span class="flex items-center gap-2 group-hover:gap-3 transition-all">Chi tiết <i data-lucide="arrow-right" class="w-3 h-3"></i></span>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+
+            return `
+                <section class="py-24 ${bg}">
+                    <div class="container mx-auto px-6">
+                        <div class="text-center mb-16 max-w-3xl mx-auto">
+                            <span class="text-teal-600 font-bold tracking-widest uppercase text-xs mb-3 block">Khám phá</span>
+                            <h2 class="text-4xl md:text-5xl font-serif font-bold text-slate-900 mb-6">${title}</h2>
+                            <div class="w-20 h-1 bg-amber-500 mx-auto mb-6 rounded-full"></div>
+                            <p class="text-slate-600 text-lg font-light leading-relaxed">${sub}</p>
+                        </div>
+                        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+                            ${cards}
+                        </div>
+                    </div>
+                </section>
+            `;
+        }
+
+        // Render Bản đồ GIS
+        function renderMap() {
+            setTimeout(() => {
+                const map = L.map('map-container').setView([10.6500, 105.7000], 10);
+                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '© OpenStreetMap contributors', maxZoom: 18 }).addTo(map);
+
+                // Vẽ Polygon (Vùng)
+                GIS_DATA.zones.forEach(z => {
+                    L.polygon(z.coords, { color: z.color, fillColor: z.color, fillOpacity: 0.2, weight: 2 }).addTo(map)
+                     .bindPopup(`<strong style="font-family:'Be Vietnam Pro'; color:${z.color}">${z.name}</strong>`);
+                });
+
+                // Vẽ Marker (Điểm) + Tool Dẫn đường
+                GIS_DATA.points.forEach(l => {
+                    const color = l.type === 'Sinh thái' ? '#0d9488' : (l.type === 'Văn hóa' ? '#d97706' : '#2563eb');
+                    const icon = L.divIcon({
+                        className: 'custom-pin',
+                        html: `<div style="background-color: ${color}; width: 32px; height: 32px; border-radius: 50% 50% 50% 0; transform: rotate(-45deg); border: 3px solid white; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.3); display: flex; align-items: center; justify-content: center;"><div style="width: 8px; height: 8px; background: white; border-radius: 50%; transform: rotate(45deg);"></div></div>`,
+                        iconSize: [32, 32], iconAnchor: [16, 32], popupAnchor: [0, -32]
+                    });
+                    
+                    // Link Google Maps
+                    const navLink = `https://www.google.com/maps/search/?api=1&query=${l.lat},${l.lng}`;
+
+                    const popup = `
+                        <div style="font-family:'Be Vietnam Pro',sans-serif; padding:16px;">
+                            <div style="margin-bottom:8px;"><span style="background:${color}20; color:${color}; font-size:10px; font-weight:700; text-transform:uppercase; padding:4px 8px; border-radius:4px;">${l.type}</span></div>
+                            <h3 style="font-family:'Playfair Display',serif; color:#0f172a; font-weight:700; font-size:18px; margin:0 0 6px 0;">${l.name}</h3>
+                            <p style="color:#64748b; font-size:13px; line-height:1.5; margin-bottom:16px;">${l.desc}</p>
+                            <a href="${navLink}" target="_blank" style="display:flex; align-items:center; justify-content:center; gap:8px; background:#0f172a; color:white; text-decoration:none; padding:10px; border-radius:8px; font-size:12px; font-weight:600; transition:all 0.2s;">
+                                📍 Dẫn đường Google Maps
+                            </a>
+                        </div>`;
+                    L.marker([l.lat, l.lng], { icon }).addTo(map).bindPopup(popup);
+                });
+            }, 100);
+
+            return `
+                <div class="h-[calc(100vh-80px)] w-full relative">
+                    <div class="absolute top-4 left-1/2 transform -translate-x-1/2 z-[1000] bg-white px-6 py-3 rounded-full shadow-lg flex gap-4 text-xs font-bold uppercase">
+                        <span class="flex items-center gap-2"><span class="w-3 h-3 bg-red-600 rounded-full"></span> Vùng lõi</span>
+                        <span class="flex items-center gap-2"><span class="w-3 h-3 bg-teal-500 rounded-full"></span> Vùng đệm</span>
+                        <span class="flex items-center gap-2"><span class="w-3 h-3 bg-amber-600 rounded-full"></span> Di sản</span>
+                    </div>
+                    <div id="map-container" class="w-full h-full bg-slate-100"></div>
+                </div>
+            `;
+        }
+
+        // Render Trang Chi tiết (Khi bấm menu)
+        function renderDetailPage(key) {
+            const titleMap = { biodiversity: 'Hệ Sinh Thái', culture: 'Văn Hóa - Lịch Sử', agriculture: 'Nông Nghiệp CNC', specialties: 'Đặc Sản Đồng Tháp' };
+            const items = CONTENT_DB[key];
+            const cards = items.map((item, idx) => `
+                <div onclick="openModal('${key}', ${idx})" class="group bg-white rounded-2xl overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300 cursor-pointer border border-slate-100 transform hover:-translate-y-2">
+                    <div class="h-60 overflow-hidden relative">
+                        <img src="${item.img}" class="w-full h-full object-cover img-hover" alt="${item.name}">
+                        <div class="absolute top-4 right-4 bg-white/90 backdrop-blur text-teal-800 text-[10px] font-bold px-3 py-1 rounded-full uppercase">${item.tag}</div>
+                    </div>
+                    <div class="p-6">
+                        <h3 class="font-serif font-bold text-xl text-slate-900 mb-2 group-hover:text-teal-600 transition-colors">${item.name}</h3>
+                        <p class="text-slate-600 text-sm line-clamp-3 mb-4">${item.intro}</p>
+                        <div class="flex items-center text-xs font-bold text-teal-600 uppercase tracking-widest gap-2">Chi tiết <i data-lucide="arrow-right" class="w-4 h-4"></i></div>
+                    </div>
+                </div>
+            `).join('');
+
+            return `
+                <div class="bg-slate-50 min-h-screen pt-12 pb-24 animate-fade-in">
+                    <div class="container mx-auto px-6">
+                        <h2 class="text-5xl font-serif font-bold text-slate-900 text-center mb-16">${titleMap[key]}</h2>
+                        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
+                            ${cards}
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        // --- ĐIỀU KHIỂN CHÍNH ---
+        function switchPage(page) {
+            const main = document.getElementById('main-content');
+            const footer = document.getElementById('footer');
+            
+            // Cập nhật nút active
+            document.querySelectorAll('.nav-btn').forEach(btn => {
+                if(btn.dataset.target === page) {
+                    btn.classList.add('bg-teal-600', 'text-white', 'shadow-md');
+                    btn.classList.remove('text-slate-600', 'hover:bg-white');
+                } else {
+                    btn.classList.remove('bg-teal-600', 'text-white', 'shadow-md');
+                    btn.classList.add('text-slate-600', 'hover:bg-white');
+                }
+            });
+
+            // Render nội dung
+            if (page === 'home') {
+                main.innerHTML = renderHome();
+                footer.style.display = 'block';
+            } else if (page === 'map') {
+                main.innerHTML = renderMap();
+                footer.style.display = 'none'; // Ẩn footer khi xem bản đồ
+            } else {
+                main.innerHTML = renderDetailPage(page);
+                footer.style.display = 'block';
+            }
+            
+            window.scrollTo(0, 0);
+            lucide.createIcons(); // Làm mới icon
+        }
+
+        function openModal(type, idx) {
+            const item = CONTENT_DB[type][idx];
+            document.getElementById('modal-img').src = item.img;
+            document.getElementById('modal-tag').innerText = item.tag;
+            document.getElementById('modal-title').innerText = item.name;
+            document.getElementById('modal-intro').innerText = `"${item.intro}"`;
+            document.getElementById('modal-detail').innerText = item.detail;
+            
+            const specsContainer = document.getElementById('modal-specs-container');
+            const specsDiv = document.getElementById('modal-specs');
+            
+            if (item.specs) {
+                specsContainer.classList.remove('hidden');
+                specsDiv.innerHTML = item.specs.map(s => `<div class="flex items-center gap-2 text-sm text-teal-700"><div class="w-1.5 h-1.5 bg-amber-600 rounded-full"></div>${s}</div>`).join('');
+            } else {
+                specsContainer.classList.add('hidden');
+            }
+            
+            document.getElementById('detail-modal').classList.remove('hidden');
+        }
+
+        function closeModal() {
+            document.getElementById('detail-modal').classList.add('hidden');
+        }
+
+        function toggleMobileMenu() {
+            document.getElementById('mobile-menu').classList.toggle('hidden');
+        }
+
+        // Khởi động ứng dụng
+        switchPage('home');
+
+    </script>
+</body>
+</html>
